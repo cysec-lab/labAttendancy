@@ -7,7 +7,7 @@ var ss = SpreadsheetApp.openById(spreadsheetId);
 // POSTが来ると実行される
 function doPost(e) {
   var params = JSON.parse(e.postData.getDataAsString());
-  var student_number = params.data;
+  var student_number = parseInt(params.data.match(/[0-9]+/g));
   decideEditOrAppend(student_number);
   return ContentService.createTextOutput('success');
 }
