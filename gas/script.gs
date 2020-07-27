@@ -12,6 +12,12 @@ function doPost(e) {
   return ContentService.createTextOutput('success');
 }
 
+// スプレッドシートの最後にデータを追記
+function appendData(data, sheet){
+  sheet.appendRow(data);
+  return;
+}
+
 // データを作るか追記するかの判断
 function decideEditOrAppend(student_number) {
   const sheet = openMonthlySheet();
@@ -28,12 +34,6 @@ function decideEditOrAppend(student_number) {
   return;
 }
 
-// スプレッドシートの最後にデータを追記
-function appendData(data, sheet){
-  sheet.appendRow(data);
-  return;
-}
-
 // シートに入力するデータの作成
 function createAppendData(date, student_number) {
   const name = getNameFromSheet(student_number);
@@ -42,8 +42,14 @@ function createAppendData(date, student_number) {
 
 // すでにシートにあるなら帰宅時間を追記
 function editData(sheet, line, date_now) {
+  var time = date_now.time;
+  // 21時を過ぎているならば時間を強制的に21時に変更
+  if (date_now.date.getHours() >= 21.0) {
+    time = "21:00";
+  }
   // getRangeを用いる際、セル番号は1から値がはじまる
-  sheet.getRange(line + 1, 6).setValue(date_now.time);
+  Logger.log(time);
+  sheet.getRange(line + 1, 6).setValue(time);
   return;
 }
 
