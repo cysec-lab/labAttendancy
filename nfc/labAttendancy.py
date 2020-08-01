@@ -1,111 +1,91 @@
 import nfc
-import requests
-import json
-from tkinter import *
-import time
+import threading
 
-import config
-
-def postData(data):
-    if(data is None):
-        print("params is empty")
-        return False
-
-    payload = {
-        "data": data
-    }
-    url = config.url
-    headers = {
-        'Content-Type': 'application/json'
-    }
-    response = requests.post(url, data=json.dumps(payload), headers=headers)
-    if(response.status_code == 200 and response.text == "success"):
-        print("post success!")
-        return True
-    print(response.text)
-    return False
+import post
+import textbox
 
 # 学籍番号が格納されているサービスコード
 service_code = 0x1a8b
 
+# NFCがリーダに触れた際に実行される
+# - カードの読み取り
+# - メッセージボックスの更新
+# - POST
 def on_connect(tag):
-    print(tag)
-
     idm, pmm = tag.polling(system_code=0xfe00)
     tag.idm, tag.pmm, tag.sys = idm, pmm, 0xfe00
 
     sc = nfc.tag.tt3.ServiceCode(service_code >> 6, service_code & 0x3f)
     bc0 = nfc.tag.tt3.BlockCode(0, service=0)
 
+    error_thread = threading.Thread(
+        target = box.changeMsg,
+        args = ("【Error】","Touch it Again!")
+    )
+
     try:
         id_data = tag.read_without_encryption([sc], [bc0])
     except Exception:
         print("touch it again")
+        error_thread.start()
     else:
         id = id_data[2:13].decode("utf-8")
         print("Student Num: " + id)
-        postData(id)
-        msg_info(id)
+        message_thread = threading.Thread(
+            target = box.changeMsg,
+            args = ("Post Success", id)
+        )
+        suc = post.postData(id)
+        if suc:
+            message_thread.start()
+        else:
+            error_thread.start()
     return True
-    
-# 画面中央にタッチされた学生証番号を1秒メッセージボックスで表示する
-# ボックスの生存期間設定: https://living-sun.com/ja/python-3x/683869-python-3-closing-window-on-tkinter-python-3x-tkinter.html
-def msg_info(id):
-    box = Tk()
 
-    # ボックス表示内容の設定
-    box.title(u"Lab Attendency")
-    Label1 = Label(box, text = "Read Successful!", font = ("Arial",30))
-    Label1.pack()
-    Label2 = Label(box, text = str(id), font = ("Arial", 20))
-    Label2.pack()
-    box.update_idletasks()
-
-    # ボックス表示位置の設定
-    ww=box.winfo_screenwidth()
-    lw=box.winfo_width()
-    wh=box.winfo_screenheight()
-    lh=box.winfo_height()
-    box.geometry(str(lw) + "x" + str(lh) + "+" + str(int(ww/2-lw/2)) + "+" + str(int(wh/2-lh/2)))
-
-    # ボックスの生存期間を設定(秒数[ms])
-    box.after(1000, box.destroy)
-    box.mainloop()
-    return
-
-
-def msg_error():
-    box = Tk()
-    box.title(u"Lab Attendency")
-    Label1 = Label(box, text = "Touch It Again!", font = ("Arial", 30), fg = "#ff0000", bg = "#000000")
-    Label1.pack()
-    box.update_idletasks()
-
-    ww=box.winfo_screenwidth()
-    lw=box.winfo_width()
-    wh=box.winfo_screenheight()
-    lh=box.winfo_height()
-    box.geometry(str(lw) + "x" + str(lh) + "+" + str(int(ww/2-lw/2)) + "+" + str(int(wh/2-lh/2)))
-
-    box.after(1500, box.destroy) #秒数[ms]
-    box.mainloop()
-    return
-
+# NFCがリーダから離れた際に実行される
 def on_release(tag):
-    pass
-
+    return True
 
 def main():
-    try:
-        with nfc.ContactlessFrontend('usb') as clf:
-            while clf.connect(rdwr={
-                'on-connect': on_connect,
-                'on-release': on_release,
-            }):
-                pass
-    except IOError:
-        print("NFCリーダーの接続Error")
-        sys.exit(0)
+    # メッセージボックスの作成
+    global box
+    box = textbox.TextBox()
+
+    # サブスレッド動作フラグ
+    running = True
+
+    # NFCリーダの設定と読み取り動作
+    def read_nfc():
+        try:
+            with nfc.ContactlessFrontend('usb') as clf:
+                try:
+                    while clf.connect(rdwr={
+                        'on-connect': on_connect,
+                        'on-release': on_release,
+                    }):
+                        if (running == False):
+                            # GUIが終了していた場合にread_nfc()をとめる
+                            return
+                except nfc.tag.tt3.Type3TagCommandError:
+                    # NFCが触れる時間が短かった際に発生するエラー
+                    error_thread = threading.Thread(
+                        target = box.changeMsg,
+                        args = ("【Error】","Touch it Again!")
+                    )
+                    error_thread.start()
+        except IOError:
+            print("NFCが接続されていません")
+            box.quit()
+            return
+
+    # 画面を表示したのちにNFCリーダをサブスレッドとして動かす
+    thread = threading.Thread(target=read_nfc)
+    thread.setDaemon(True)
+    box.start(thread.start)
+
+    # サブスレッド終了処理
+    running = False
+    thread.join()
 
 if __name__ == '__main__':
     main()
