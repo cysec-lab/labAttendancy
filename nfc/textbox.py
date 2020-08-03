@@ -27,9 +27,14 @@ class TextBox():
         self.box.mainloop()
 
     # デフォルトメッセージの表示
-    def defaultMsg(self):
-        self.label1["text"] = "Touch your Card"
-        self.label2["text"] = ""
+    def defaultMsg(self, *args):
+        # メッセージ文(1行目)
+        self.label1["text"] = str(args[0])
+        # メッセージ文(2行目)・読み取った番号を格納する想定
+        if len(args) == 2:
+            self.label2["text"] = str(args[1])
+        else:
+            self.label2["text"] = ""
         self.box.update_idletasks()
 
     # 引数に入っているメッセージを表示
@@ -43,7 +48,7 @@ class TextBox():
 
         # 1秒後にデフォルトメッセージに戻す
         time.sleep(1)
-        self.defaultMsg()
+        self.defaultMsg("Touch your card")
 
     def quit(self):
         self.box.quit()

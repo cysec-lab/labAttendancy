@@ -32,12 +32,17 @@ def on_connect(tag):
         id = id_data[2:13].decode("utf-8")
         print("Student Num: " + id)
         message_thread = threading.Thread(
-            target = box.changeMsg,
-            args = ("Post Success", id)
+            target = box.defaultMsg,
+            args = ("Posting...", id)
         )
+        message_thread.start()
         suc = post.postData(id)
         if suc:
-            message_thread.start()
+            success_thread = threading.Thread(
+                target = box.changeMsg,
+                args = ("Post Success", id)
+            )
+            success_thread.start()
         else:
             error_thread.start()
     return True
@@ -58,21 +63,22 @@ def main():
     def read_nfc():
         try:
             with nfc.ContactlessFrontend('usb') as clf:
-                try:
-                    while clf.connect(rdwr={
-                        'on-connect': on_connect,
-                        'on-release': on_release,
-                    }):
-                        if (running == False):
-                            # GUIが終了していた場合にread_nfc()をとめる
-                            return
-                except nfc.tag.tt3.Type3TagCommandError:
-                    # NFCが触れる時間が短かった際に発生するエラー
-                    error_thread = threading.Thread(
-                        target = box.changeMsg,
-                        args = ("【Error】","Touch it Again!")
-                    )
-                    error_thread.start()
+                while 1:
+                    try:
+                        while clf.connect(rdwr={
+                            'on-connect': on_connect,
+                            'on-release': on_release,
+                        }):
+                            if (running == False):
+                                # GUIが終了していた場合にread_nfc()をとめる
+                                return
+                    except nfc.tag.tt3.Type3TagCommandError:
+                        # NFCが触れる時間が短かった際に発生するエラー
+                        error_thread = threading.Thread(
+                            target = box.changeMsg,
+                            args = ("【Error】","Touch it Again!")
+                        )
+                        error_thread.start()
         except IOError:
             print("NFCが接続されていません")
             box.quit()
