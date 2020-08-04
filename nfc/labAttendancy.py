@@ -4,6 +4,8 @@ import threading
 import post
 import textbox
 
+import winsound
+
 # 学籍番号が格納されているサービスコード
 service_code = 0x1a8b
 
@@ -18,6 +20,8 @@ def on_connect(tag):
     sc = nfc.tag.tt3.ServiceCode(service_code >> 6, service_code & 0x3f)
     bc0 = nfc.tag.tt3.BlockCode(0, service=0)
 
+    beep_connect()
+
     error_thread = threading.Thread(
         target = box.changeMsg,
         args = ("【Error】","Touch it Again!")
@@ -27,6 +31,7 @@ def on_connect(tag):
         id_data = tag.read_without_encryption([sc], [bc0])
     except Exception:
         print("touch it again")
+        beep_error()
         error_thread.start()
     else:
         id = id_data[2:13].decode("utf-8")
@@ -42,8 +47,10 @@ def on_connect(tag):
                 target = box.changeMsg,
                 args = ("Post Success", id)
             )
+            beep_success()
             success_thread.start()
         else:
+            beep_error()
             error_thread.start()
     return True
 
@@ -92,6 +99,14 @@ def main():
     # サブスレッド終了処理
     running = False
     thread.join()
+
+def beep_connect():
+    winsound.Beep(1567,300)
+def beep_success():
+    winsound.Beep(2093,300)
+def beep_error():
+    winsound.Beep(1000,120)
+    winsound.Beep(880,120)
 
 if __name__ == '__main__':
     main()
