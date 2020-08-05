@@ -20,7 +20,7 @@ def on_connect(tag):
     sc = nfc.tag.tt3.ServiceCode(service_code >> 6, service_code & 0x3f)
     bc0 = nfc.tag.tt3.BlockCode(0, service=0)
 
-    beep_connect()
+    beep(1567,300)
 
     error_thread = threading.Thread(
         target = box.changeMsg,
@@ -31,7 +31,7 @@ def on_connect(tag):
         id_data = tag.read_without_encryption([sc], [bc0])
     except Exception:
         print("touch it again")
-        beep_error()
+        beep(1000,130,880,130)
         error_thread.start()
     else:
         id = id_data[2:13].decode("utf-8")
@@ -47,10 +47,10 @@ def on_connect(tag):
                 target = box.changeMsg,
                 args = ("Post Success", id)
             )
-            beep_success()
+            beep(2093,300)
             success_thread.start()
         else:
-            beep_error()
+            beep(1000,120,880,120)
             error_thread.start()
     return True
 
@@ -100,13 +100,27 @@ def main():
     running = False
     thread.join()
 
-def beep_connect():
-    winsound.Beep(1567,300)
-def beep_success():
-    winsound.Beep(2093,300)
-def beep_error():
-    winsound.Beep(1000,120)
-    winsound.Beep(880,120)
+def beep(*args):
+    """
+    Usage:
+    args[i] = Hz, args[i+1] = ms (i = odd)
+    args[i+2] = Hz, args[i+3] ms ...
+    """
+    if len(args) % 2 != 0 :
+        # argument error
+        return -1
+    else:
+        for i in range(0,int(len(args)),2):
+            try:
+                winsound.Beep(int(args[i]),int(args[i+1]))
+            except RuntimeError:
+                print(RuntimeError)
+                break
+    return
+
+def beep(*args):
+    for i in len(args):
+        winsound.Beep(args[i-1],300/i) 
 
 if __name__ == '__main__':
     main()
