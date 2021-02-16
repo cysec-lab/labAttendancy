@@ -118,9 +118,5 @@ def beep(*args):
                 break
     return
 
-def beep(*args):
-    for i in len(args):
-        winsound.Beep(args[i-1],300/i) 
-
 if __name__ == '__main__':
     main()
