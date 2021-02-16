@@ -29,3 +29,9 @@
   - `config.py`
     - URLにGoogleAppScriptの公開URLを貼り付ける
   - `$ python labAttendancy.py`
+
+## Common Problems
+
+- NFCが読み込めなくなった場合
+  - NFCリーダをPythonから使うためにデバイスドライバを入れ替えたりしている
+  - [環境](環境) にかかれているNFCをを読み取るための設定諸々から設定をし直す必要あり
